@@ -10,6 +10,8 @@ from langchain.chat_models import ChatOpenAI
 from typing import List, Union
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 from langchain.memory import ConversationBufferWindowMemory
+from dotenv import load_dotenv
+import os
 import openai
 import re
 import streamlit as st
@@ -20,6 +22,9 @@ from config import RETRIEVAL_PROMPT, CHAT_MODEL, INDEX_NAME, SYSTEM_PROMPT
 
 redis_client = get_redis_connection()
 
+load_dotenv()
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+openai.api_key = OPENAI_API_KEY
 
 def answer_user_question(query):
 
