@@ -10,8 +10,10 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.vectorstores import DocArrayInMemorySearch, Milvus
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-filedir = "text/vw.com/"
+filedir = "demo/vw.com/"
 # Create a list to store the text files
+
+
 def init_retriever():
     docs = []
     # Get all the text files in the text directory
@@ -20,22 +22,25 @@ def init_retriever():
 
         docs.extend(loader.load())
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1500, chunk_overlap=200)
     chuncks = text_splitter.split_documents(docs)
 
     # Create embeddings for chuncks
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     # vectordb = DocArrayInMemorySearch.from_documents(chuncks, embeddings)
     vectordb = Milvus.from_documents(
-    chuncks,
-    embeddings,
-    connection_args={"host": "127.0.0.1", "port": "19530"},
-)
+        chuncks,
+        embeddings,
+        connection_args={"host": "127.0.0.1", "port": "9091"},
+    )
 
     # Define retriever
-    retriever = vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 2, "fetch_k": 4})
+    retriever = vectordb.as_retriever(
+        search_type="mmr", search_kwargs={"k": 2, "fetch_k": 4})
 
     return retriever
+
 
 class StreamHandler(BaseCallbackHandler):
     def __init__(self, container: st.delta_generator.DeltaGenerator, initial_text: str = ""):
@@ -45,6 +50,7 @@ class StreamHandler(BaseCallbackHandler):
     def on_llm_new_token(self, token: str, **kwargs) -> None:
         self.text += token
         self.container.markdown(self.text)
+
 
 class PrintRetrievalHandler(BaseCallbackHandler):
     def __init__(self, container):
@@ -60,6 +66,7 @@ class PrintRetrievalHandler(BaseCallbackHandler):
             self.container.write(f"**Document {idx} from {source}**")
             self.container.markdown(doc.page_content)
 
+
 # App
 if __name__ == "__main__":
 
@@ -72,7 +79,8 @@ if __name__ == "__main__":
     retriever = init_retriever()
 
     # Setup memory for contextual conversation
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    memory = ConversationBufferMemory(
+        memory_key="chat_history", return_messages=True)
 
     # Setup LLM and QA chain
     llm = ChatOpenAI(
@@ -83,7 +91,8 @@ if __name__ == "__main__":
     )
 
     if "messages" not in st.session_state or st.sidebar.button("Clear message history"):
-        st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
+        st.session_state["messages"] = [
+            {"role": "assistant", "content": "How can I help you?"}]
 
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
@@ -91,11 +100,14 @@ if __name__ == "__main__":
     user_query = st.chat_input(placeholder="Ask me anything!")
 
     if user_query:
-        st.session_state.messages.append({"role": "user", "content": user_query})
+        st.session_state.messages.append(
+            {"role": "user", "content": user_query})
         st.chat_message("user").write(user_query)
 
         with st.chat_message("assistant"):
             retrieval_handler = PrintRetrievalHandler(st.container())
             stream_handler = StreamHandler(st.empty())
-            response = qa_chain.run(user_query, callbacks=[retrieval_handler, stream_handler])
-            st.session_state.messages.append({"role": "assistant", "content": response})
+            response = qa_chain.run(user_query, callbacks=[
+                                    retrieval_handler, stream_handler])
+            st.session_state.messages.append(
+                {"role": "assistant", "content": response})
